@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
+  <title>Magic Number - Retro CRT Style</title>
+  <style>
+    /* --- Basic Reset / Page Styling --- */
+    body {
+      margin: 0;
+      padding: 0;
+      /* Retro CRT background: blackish */
+      background-color: #000;
+      /* Monospace font for that retro feeling */
+      font-family: 'Courier New', Courier, monospace;
+      color: #00ff00;
+      position: relative; /* for overlay positioning */
+    }
+
+    /* --- Container to hold content --- */
+    .container {
+      max-width: 400px;
+      margin: 40px auto;
+      padding: 20px;
+      box-sizing: border-box;
+      /* Slight flicker effect on the container to mimic CRT */
+      animation: crtFlicker 2s infinite;
+    }
+
+    /* Title styling */
+    h1 {
+      font-size: 1.5em;
+      margin-bottom: 1em;
+      text-align: center;
+      /* Add neon glow effect */
+      text-shadow: 0 0 5px #00ff00;
+    }
+
+    /* Magic Number styling */
+    p.result {
+      font-size: 2em;
+      text-align: center;
+      margin: 1em 0;
+      /* Neon glow effect + color */
+      color: #00ff00;
+      text-shadow: 0 0 5px #00ff00;
+    }
+
+    /* The countdown button (appears 'inactive') */
+    .refresh-button {
+      display: block;
+      margin: 20px auto 0;
+      background-color: #003300; /* darker greenish/black */
+      color: #008000;
+      border: 1px solid #00ff00;
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+      text-shadow: 0 0 3px #00ff00;
+    }
+    .refresh-button:hover {
+      background-color: #001900; /* subtle change on hover */
+    }
+
+    /* --- Animation for the magic number when refreshed --- */
+    @keyframes refreshAnimation {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.3);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+    .refreshed {
+      animation: refreshAnimation 0.4s ease-in-out;
+    }
+
+    /* --- CRT Flicker effect on the container --- */
+    @keyframes crtFlicker {
+      0%, 100% {
+        opacity: 1;
+      }
+      5% {
+        opacity: 0.98;
+      }
+      10% {
+        opacity: 0.97;
+      }
+      15% {
+        opacity: 0.99;
+      }
+      25% {
+        opacity: 0.95;
+      }
+      35% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.98;
+      }
+      60% {
+        opacity: 1;
+      }
+      75% {
+        opacity: 0.96;
+      }
+      85% {
+        opacity: 1;
+      }
+    }
+
+    /* --- Scanline overlay to mimic CRT lines --- */
+    .scanlines {
+      pointer-events: none; /* Don’t block clicks */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0,
+        rgba(0, 255, 0, 0.03) 1px,
+        rgba(0, 0, 0, 0) 2px
+      );
+      z-index: 9999; /* on top of everything */
+    }
+  </style>
+</head>
+<body>
+  <!-- CRT scanline overlay -->
+  <div class="scanlines"></div>
+
+  <div class="container">
+    <h1>Magic Number</h1>
+    <p class="result" id="result">Loading...</p>
+    <button
+      id="refresh-button"
+      class="refresh-button"
+      onclick="calculateNumber()"
+    ></button>
+  </div>
+
+  <script>
+    // Animate the number with a bounce/scale effect
+    function animateNumber() {
+      const resultEl = document.getElementById('result');
+      // Remove and re-add the class to retrigger the animation
+      resultEl.classList.remove('refreshed');
+      void resultEl.offsetWidth; // Force reflow
+      resultEl.classList.add('refreshed');
+    }
+
+    // Calculate the magic number based on day and month in Israel
+    function calculateNumber() {
+      // Get current date in Israel timezone
+      const options = {
+        timeZone: 'Asia/Jerusalem',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric'
+      };
+      const formatter = new Intl.DateTimeFormat('en-GB', options);
+      const parts = formatter.formatToParts(new Date());
+
+      // Extract day and month from the formatted date parts
+      let day, month;
+      for (const part of parts) {
+        if (part.type === 'day') day = parseInt(part.value, 10);
+        if (part.type === 'month') month = parseInt(part.value, 10);
+      }
+
+      // Perform calculation: (day * day) + month
+      const result = (day * day) + month;
+
+      // Display the result
+      const resultEl = document.getElementById('result');
+      resultEl.textContent = result;
+
+      // Trigger the animation
+      animateNumber();
+    }
+
+    // Countdown to next midnight in Israel
+    let countdownInterval;
+    function startCountdown() {
+      // Clear any existing interval to avoid duplicates
+      clearInterval(countdownInterval);
+
+      // Update immediately and then every second
+      updateCountdown();
+      countdownInterval = setInterval(updateCountdown, 1000);
+    }
+
+    function updateCountdown() {
+      // Current time in Israel
+      const nowIsrael = new Date().toLocaleString("en-US", { timeZone: "Asia/Jerusalem" });
+      const currentTime = new Date(nowIsrael);
+
+      // Next midnight in Israel
+      const nextMidnight = new Date(
+        currentTime.getFullYear(),
+        currentTime.getMonth(),
+        currentTime.getDate() + 1, // next day
+        0, // hour
+        0, // minute
+        0  // second
+      );
+
+      // Time difference in seconds
+      const diff = Math.floor((nextMidnight - currentTime) / 1000);
+
+      if (diff <= 0) {
+        // It's midnight or past — refresh magic number, restart countdown
+        calculateNumber();  // triggers animation as well
+        startCountdown();
+      } else {
+        // Format the difference as HH:MM:SS
+        const hours = Math.floor(diff / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+
+        const hh = hours < 10 ? '0' + hours : hours;
+        const mm = minutes < 10 ? '0' + minutes : minutes;
+        const ss = seconds < 10 ? '0' + seconds : seconds;
+
+        // Update button text to show the countdown
+        document.getElementById('refresh-button').textContent = `${hh}:${mm}:${ss}`;
+      }
+    }
+
+    // Initial load:
+    calculateNumber(); // Show the initial magic number (with animation)
+    startCountdown();  // Start the timer to next day in Israel
+  </script>
+</body>
+</html>
