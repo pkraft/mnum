@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
-  <title>Magic Number - Retro CRT Style</title>
+  <title>Magic Number - Retro CRT Style (Typewriter Animation)</title>
   <style>
     /* --- Basic Reset / Page Styling --- */
     body {
@@ -39,7 +39,7 @@
       text-shadow: 0 0 5px #00ff00;
     }
 
-    /* Magic Number styling */
+    /* Magic Number wrapper (we’ll “type” into here) */
     p.result {
       font-size: 2em;
       text-align: center;
@@ -47,6 +47,7 @@
       /* Neon glow effect + color */
       color: #00ff00;
       text-shadow: 0 0 5px #00ff00;
+      min-height: 1em; /* so the box remains stable even when empty */
     }
 
     /* The countdown button (appears 'inactive') */
@@ -63,22 +64,6 @@
     }
     .refresh-button:hover {
       background-color: #001900; /* subtle change on hover */
-    }
-
-    /* --- Animation for the magic number when refreshed --- */
-    @keyframes refreshAnimation {
-      0% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.3);
-      }
-      100% {
-        transform: scale(1);
-      }
-    }
-    .refreshed {
-      animation: refreshAnimation 0.4s ease-in-out;
     }
 
     /* --- CRT Flicker effect on the container --- */
@@ -131,6 +116,17 @@
       );
       z-index: 9999; /* on top of everything */
     }
+
+    /* --- Blinking Cursor for Typewriter Effect --- */
+    .cursor {
+      display: inline-block;
+      animation: blink 0.7s infinite;
+      margin-left: 1px;
+    }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -148,16 +144,47 @@
   </div>
 
   <script>
-    // Animate the number with a bounce/scale effect
-    function animateNumber() {
-      const resultEl = document.getElementById('result');
-      // Remove and re-add the class to retrigger the animation
-      resultEl.classList.remove('refreshed');
-      void resultEl.offsetWidth; // Force reflow
-      resultEl.classList.add('refreshed');
+    /**
+     * Typewriter effect: Clears the result area, then types out the new text
+     * character-by-character, using a blinking cursor.
+     * 
+     * @param {HTMLElement} element The DOM element to display typed text in.
+     * @param {string} text         The text to be typed out.
+     * @param {number} speed        Typing speed in milliseconds.
+     */
+    function typeText(element, text, speed) {
+      // Clear the element’s content first
+      element.textContent = '';
+
+      // Create a span to hold the typed text
+      const typedSpan = document.createElement('span');
+      element.appendChild(typedSpan);
+
+      // Create a blinking cursor
+      const cursor = document.createElement('span');
+      cursor.classList.add('cursor');
+      cursor.textContent = '_';
+      element.appendChild(cursor);
+
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < text.length) {
+          // Add the next character
+          typedSpan.textContent += text.charAt(index);
+          index++;
+        } else {
+          // Done typing
+          clearInterval(interval);
+          // Optionally remove the cursor after finishing
+          // element.removeChild(cursor);
+        }
+      }, speed);
     }
 
-    // Calculate the magic number based on day and month in Israel
+    /**
+     * Calculates and displays the magic number for the current Israel date.
+     * Also triggers the typewriter animation each time it refreshes.
+     */
     function calculateNumber() {
       // Get current date in Israel timezone
       const options = {
@@ -179,12 +206,9 @@
       // Perform calculation: (day * day) + month
       const result = (day * day) + month;
 
-      // Display the result
+      // Typewriter the result
       const resultEl = document.getElementById('result');
-      resultEl.textContent = result;
-
-      // Trigger the animation
-      animateNumber();
+      typeText(resultEl, String(result), 100); // 100ms per character
     }
 
     // Countdown to next midnight in Israel
@@ -218,7 +242,7 @@
 
       if (diff <= 0) {
         // It's midnight or past — refresh magic number, restart countdown
-        calculateNumber();  // triggers animation as well
+        calculateNumber();
         startCountdown();
       } else {
         // Format the difference as HH:MM:SS
@@ -236,7 +260,7 @@
     }
 
     // Initial load:
-    calculateNumber(); // Show the initial magic number (with animation)
+    calculateNumber(); // Show the initial magic number (typed)
     startCountdown();  // Start the timer to next day in Israel
   </script>
 </body>
